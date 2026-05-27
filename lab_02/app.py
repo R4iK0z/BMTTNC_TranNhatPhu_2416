@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, json
+from flask import Flask, render_template, request, jsonify
 from cipher.caesar import CaesarCipher
 
 app = Flask(__name__)

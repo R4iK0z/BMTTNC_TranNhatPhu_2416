@@ -34,14 +34,12 @@ class PlayFairCipher:
                     return row, col
         return -1, -1 # Trả về nếu không tìm thấy (trường hợp ký tự không hợp lệ)
 
-    def playfair_encrypt(self, plain_text, matrix):
-        # Chuyển "J" thành "I" trong văn bản đầu vào
-        plain_text = plain_text.replace("J", "I")
-        plain_text = plain_text.upper()
-        # Loại bỏ các ký tự không phải chữ cái
+    def split_pairs(self, plain_text):
+        # 1. Chuyển "J" thành "I" và chuẩn hóa chuỗi dữ liệu đầu vào
+        plain_text = plain_text.replace("J", "I").upper()
         plain_text = ''.join(filter(str.isalpha, plain_text))
 
-        # Xử lý các cặp ký tự giống nhau bằng cách chèn 'X'
+        # 2. Xử lý chia cặp ký tự giống nhau bằng cách chèn 'X'
         processed_text = ""
         i = 0
         while i < len(plain_text):
@@ -50,34 +48,39 @@ class PlayFairCipher:
                 char2 = plain_text[i+1]
                 if char1 == char2:
                     processed_text += char1 + "X"
-                    i += 1
+                    i += 1  # Tiến 1 bước để ký tự trùng tiếp theo đi với cặp sau
                 else:
                     processed_text += char1 + char2
-                    i += 2
+                    i += 2  # Tiến 2 bước lấy cặp bình thường
             else:
                 processed_text += char1
                 i += 1
 
-        plain_text = processed_text
-        
-        # Thêm 'X' nếu độ dài văn bản là số lẻ
-        if len(plain_text) % 2 != 0:
-            plain_text += "X"
+        # 3. Thêm 'X' vào cuối nếu tổng độ dài văn bản là số lẻ
+        if len(processed_text) % 2 != 0:
+            processed_text += "X"
+            
+        return processed_text
+
+    def playfair_encrypt(self, plain_text, matrix):
+        # Gọi hàm split_pairs để xử lý chia cặp ký tự trước khi mã hóa
+        processed_text = self.split_pairs(plain_text)
 
         encrypted_text = ""
-        for i in range(0, len(plain_text), 2):
-            pair = plain_text[i:i+2]
+        # Duyệt qua từng cặp 2 ký tự một để thực hiện biến đổi ma trận
+        for i in range(0, len(processed_text), 2):
+            pair = processed_text[i:i+2]
             
             row1, col1 = self.find_letter_coords(matrix, pair[0])
             row2, col2 = self.find_letter_coords(matrix, pair[1])
 
-            if row1 == row2:
+            if row1 == row2:  # Quy tắc cùng hàng
                 encrypted_text += matrix[row1][(col1 + 1) % 5]
                 encrypted_text += matrix[row2][(col2 + 1) % 5]
-            elif col1 == col2:
+            elif col1 == col2:  # Quy tắc cùng cột
                 encrypted_text += matrix[(row1 + 1) % 5][col1]
                 encrypted_text += matrix[(row2 + 1) % 5][col2]
-            else:
+            else:  # Quy tắc hình chữ nhật (khác hàng khác cột)
                 encrypted_text += matrix[row1][col2]
                 encrypted_text += matrix[row2][col1]
         
@@ -87,7 +90,7 @@ class PlayFairCipher:
         cipher_text = cipher_text.upper()
         decrypted_text = ""
         
-        # 1. Giải mã các cặp ký tự qua ma trận
+        # 1. Giải mã các cặp ký tự qua ma trận ngược (-1)
         for i in range(0, len(cipher_text), 2):
             pair = cipher_text[i:i+2]
             row1, col1 = self.find_letter_coords(matrix, pair[0])
@@ -103,22 +106,20 @@ class PlayFairCipher:
                 decrypted_text += matrix[row1][col2]
                 decrypted_text += matrix[row2][col1]
 
-        # 2. Xử lý xóa bỏ các chữ 'X' độn dữ liệu
+        # 2. XỬ LÝ SỬA LỖI: Duyệt tuần tự để khử chữ 'X' độn dữ liệu một cách chuẩn xác
         banro = ""
         length = len(decrypted_text)
         i = 0
         while i < length:
-            banro += decrypted_text[i]
-            # Nếu ký tự tiếp theo là 'X' và ký tự sau 'X' giống ký tự hiện tại -> Bỏ qua 'X'
-            if i + 2 < length and decrypted_text[i+1] == 'X' and decrypted_text[i] == decrypted_text[i+2]:
-                banro += decrypted_text[i+2]
-                i += 3  # Nhảy qua cả cụm (Ký tự + 'X' + Ký tự trùng)
+            # Kiểm tra xem chữ 'X' có nằm kẹp giữa 2 chữ cái giống nhau không (Ví dụ: L X L)
+            if i > 0 and i + 1 < length and decrypted_text[i] == 'X' and decrypted_text[i-1] == decrypted_text[i+1]:
+                # Đây là chữ X độn để tách từ trùng -> Bỏ qua không thêm vào bản rõ
+                i += 1
             else:
-                if i + 1 < length:
-                    banro += decrypted_text[i+1]
-                i += 2  # Nhảy sang cặp tiếp theo bình thường
+                banro += decrypted_text[i]
+                i += 1
 
-        # Xử lý ký tự 'X' thừa ở cuối cùng (nếu có do chuỗi lẻ ban đầu)
+        # Xử lý ký tự 'X' thừa ở cuối cùng (nếu có do chuỗi lẻ ban đầu độn vào cho chẵn cặp)
         if banro.endswith("X"):
             banro = banro[:-1]
 
@@ -148,4 +149,4 @@ if __name__ == "__main__":
     
     # 3. Giải mã
     decrypted_text = cipher.playfair_decrypt(cipher_text, playfair_matrix)
-    print(f"Bản rõ sau giải mã: {decrypted_text.upper()}")
+    print(f"Bản rõ sau giải mã: {decrypted_text}")
