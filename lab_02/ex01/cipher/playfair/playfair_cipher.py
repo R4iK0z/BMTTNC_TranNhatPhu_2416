@@ -87,6 +87,7 @@ class PlayFairCipher:
         cipher_text = cipher_text.upper()
         decrypted_text = ""
         
+        # 1. Giải mã các cặp ký tự qua ma trận
         for i in range(0, len(cipher_text), 2):
             pair = cipher_text[i:i+2]
             row1, col1 = self.find_letter_coords(matrix, pair[0])
@@ -102,28 +103,22 @@ class PlayFairCipher:
                 decrypted_text += matrix[row1][col2]
                 decrypted_text += matrix[row2][col1]
 
-       
-        
+        # 2. Xử lý xóa bỏ các chữ 'X' độn dữ liệu
         banro = ""
-       
+        length = len(decrypted_text)
         i = 0
-        while i < len(decrypted_text):
-            # Kiểm tra xem có đủ ký tự để so sánh không
-            if i + 2 < len(decrypted_text):
-                # Logic này từ hình ảnh gốc: so sánh ký tự hiện tại với ký tự ở vị trí i+2
-                if decrypted_text[i] == decrypted_text[i+2] and decrypted_text[i+1] == 'X':
-                    banro += decrypted_text[i]
-                    i += 1 # Bỏ qua ký tự 'X' và cặp tiếp theo
-                    continue
-            
-            # Xử lý cặp ký tự bình thường
-            if i + 1 < len(decrypted_text):
-                 banro += decrypted_text[i] + decrypted_text[i+1]
-            else: # Xử lý ký tự cuối cùng nếu có
-                 banro += decrypted_text[i]
-            i += 2
+        while i < length:
+            banro += decrypted_text[i]
+            # Nếu ký tự tiếp theo là 'X' và ký tự sau 'X' giống ký tự hiện tại -> Bỏ qua 'X'
+            if i + 2 < length and decrypted_text[i+1] == 'X' and decrypted_text[i] == decrypted_text[i+2]:
+                banro += decrypted_text[i+2]
+                i += 3  # Nhảy qua cả cụm (Ký tự + 'X' + Ký tự trùng)
+            else:
+                if i + 1 < length:
+                    banro += decrypted_text[i+1]
+                i += 2  # Nhảy sang cặp tiếp theo bình thường
 
-        # Xử lý ký tự 'X' ở cuối cùng (nếu được thêm vào cho chuỗi lẻ)
+        # Xử lý ký tự 'X' thừa ở cuối cùng (nếu có do chuỗi lẻ ban đầu)
         if banro.endswith("X"):
             banro = banro[:-1]
 
